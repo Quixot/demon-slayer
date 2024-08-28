@@ -31,6 +31,8 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Platformer")
 
 
+
+
 # Цвета
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -44,13 +46,81 @@ clock = pygame.time.Clock()
 
 
 
-# Загрузка изображения эмодзи
-# player_image =  load_emoji("😼", (64, 64))
-player_image =  load_emoji("🐬", (64, 64))
-enemy_image =   load_emoji("👾", (64, 64))
-box_image =     load_emoji("🧱", (128, 128))
-bonus_image =   load_emoji("💎", (64, 64))
-bullet_image =  load_emoji("🥎", (16,16))
+
+
+# Загрузка изображений врагов
+enemy_images = [
+    pygame.image.load("daemon1.png"),
+    pygame.image.load("daemon2.png"),
+    pygame.image.load("daemon3.png")
+]
+# Масштабирование изображений врагов
+enemy_images = [pygame.transform.scale(img, (120, 120)) for img in enemy_images]
+
+
+
+# box_image = pygame.image.load('rock.png').convert_alpha()
+# box_image = pygame.transform.scale(box_image, (128, 128))
+# Загрузка изображений преград
+# rock1 = pygame.image.load("rock1.png")
+# rock1 = pygame.transform.scale(rock1, (128, 128))
+
+rock2 = pygame.image.load("rock2.png")
+rock2 = pygame.transform.scale(rock2, (300, 150))
+
+# rock3 = pygame.image.load("rock3.png")
+# rock3 = pygame.transform.scale(rock3, (400, 266))
+
+box_images = [
+    rock2
+]
+# Масштабирование изображений врагов
+# box_images = [pygame.transform.scale(img, (random.randint(128, 200), random.randint(128, 200))) for img in box_images]
+
+
+bonus_image = pygame.image.load('bonus.png').convert_alpha()
+bonus_image = pygame.transform.scale(bonus_image, (48, 48))
+
+
+bullet_image =  load_emoji("⭐", (16,16))
+
+# player_image_right = pygame.image.load('player_right.png').convert_alpha()  # Изображение для движения вправо
+# player_image_left = pygame.image.load('player_left.png').convert_alpha()    # Изображение для движения влево
+# # Изменение размера изображений
+# player_image_right = pygame.transform.scale(player_image_right, (128, 128))  # Задайте нужный размер
+# player_image_left = pygame.transform.scale(player_image_left, (128, 128))    # Задайте нужный размер
+
+
+# Загрузка изображений для анимации бега
+run_frames_right = [
+    pygame.image.load('run_right_1.png').convert_alpha(),
+    pygame.image.load('run_right_2.png').convert_alpha(),
+    pygame.image.load('run_right_3.png').convert_alpha()
+]
+
+run_frames_left = [
+    pygame.image.load('run_left_1.png').convert_alpha(),
+    pygame.image.load('run_left_2.png').convert_alpha(),
+    pygame.image.load('run_left_3.png').convert_alpha()
+]
+
+# Загрузка изображений для анимации стрельбы
+shoot_frames_right = [
+    pygame.image.load('shoot_right_1.png').convert_alpha(),
+    pygame.image.load('shoot_right_1.png').convert_alpha()
+]
+
+shoot_frames_left = [
+    pygame.image.load('shoot_left_1.png').convert_alpha(),
+    pygame.image.load('shoot_left_1.png').convert_alpha()
+]
+
+# Опционально: изменение размера изображений
+run_frames_right = [pygame.transform.scale(frame, (128, 128)) for frame in run_frames_right]
+run_frames_left = [pygame.transform.scale(frame, (128, 128)) for frame in run_frames_left]
+shoot_frames_right = [pygame.transform.scale(frame, (128, 128)) for frame in shoot_frames_right]
+shoot_frames_left = [pygame.transform.scale(frame, (128, 128)) for frame in shoot_frames_left]
+
 
 
 class Camera:
@@ -77,7 +147,15 @@ class Camera:
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = player_image
+        # self.image = player_image_right
+        self.run_frames_right = run_frames_right
+        self.run_frames_left = run_frames_left
+        self.shoot_frames_right = shoot_frames_right
+        self.shoot_frames_left = shoot_frames_left  
+        self.current_frame = 0
+        self.frame_delay = 5  # Количество обновлений до смены кадра
+        self.frame_counter = 0  # Счетчик обновлений
+        self.image = self.run_frames_right[self.current_frame]
         self.rect = self.image.get_rect()
         self.rect.center = (WIDTH // 2, HEIGHT - 150)
         self.speed_x = 0
@@ -85,17 +163,18 @@ class Player(pygame.sprite.Sprite):
         self.on_ground = False
         self.lives = 3
         self.last_direction = 'right'  # В какую сторону смотрел плеер до остановки
+        self.is_shooting = False
 
     def update(self):
         self.gravity()
-
+        self.animate()  # Вызов функции для анимации
 
         # Изменение изображения при смене направления
         if self.speed_x > 0 and self.last_direction != 'right':
-            self.image = load_emoji("🐬", (64, 64))  # Эмодзи для движения вправо
+            self.image = self.run_frames_right[self.current_frame % len(self.run_frames_right)]  # Эмодзи для движения вправо
             self.last_direction = 'right'
         elif self.speed_x < 0 and self.last_direction != 'left':
-            self.image = load_emoji("😾", (64, 64))  # Эмодзи для движения влево
+            self.image = self.run_frames_left[self.current_frame % len(self.run_frames_left)]  # Эмодзи для движения влево
             self.last_direction = 'left'
 
 
@@ -128,13 +207,42 @@ class Player(pygame.sprite.Sprite):
         if not self.on_ground:
             self.speed_y += 0.5
 
+    def animate(self):
+        self.frame_counter += 1  # Увеличиваем счетчик обновлений
+
+        if self.frame_counter >= self.frame_delay:  # Если счетчик достиг порога
+            self.current_frame += 1  # Переход на следующий кадр
+            self.frame_counter = 0  # Сброс счетчика
+
+            # Анимация стрельбы
+            if self.is_shooting:
+                if self.last_direction == 'right':
+                    self.image = self.shoot_frames_right[self.current_frame % len(self.shoot_frames_right)]
+                else:
+                    self.image = self.shoot_frames_left[self.current_frame % len(self.shoot_frames_left)]
+            # Анимация бега
+            elif self.speed_x != 0:
+                if self.last_direction == 'right':
+                    self.image = self.run_frames_right[self.current_frame % len(self.run_frames_right)]
+                else:
+                    self.image = self.run_frames_left[self.current_frame % len(self.run_frames_left)]
+            else:
+                if self.last_direction == 'right':
+                    self.image = self.run_frames_right[0]  # Статичная поза
+                else:
+                    self.image = self.run_frames_left[0]  # Статичная поза
+
     def shoot(self):
+        self.is_shooting = True
         if self.last_direction == 'right':
             bullet = Bullet(self.rect.right, self.rect.centery, 5)
         else:
             bullet = Bullet(self.rect.left, self.rect.centery, -5)
         all_sprites.add(bullet)
         bullets.add(bullet)
+
+    def stop_shooting(self):
+        self.is_shooting = False        
 
     def collide_with_boxes(self, direction):
         if direction == 'x':
@@ -178,25 +286,49 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()           
 
 
+
 class Enemy(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
-        self.image = enemy_image
+        self.image = random.choice(enemy_images)  # Случайный выбор изображения врага
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         self.speed_x = random.choice(LEVELS[LEVEL-1]['enemy_speed_range'])
+        self.speed_y = 0
+        self.attack_speed = 3  # Скорость движения врага к игроку
+        self.attack_distance = 300  # Расстояние, на котором враг начинает атаковать
 
     def update(self):
-        self.rect.x += self.speed_x
-        if self.rect.right > LEVEL_WIDTH or self.rect.left < 0:
-            self.speed_x = -self.speed_x
+        # Проверяем расстояние до игрока
+        distance_to_player = self.rect.centerx - player.rect.centerx
+
+        if abs(distance_to_player) < self.attack_distance:
+            # Если враг близко к игроку, он движется к игроку
+            if self.rect.centerx > player.rect.centerx:
+                self.rect.x -= self.attack_speed
+            else:
+                self.rect.x += self.attack_speed
+
+            if self.rect.centery > player.rect.centery:
+                self.rect.y -= self.attack_speed
+            else:
+                self.rect.y += self.attack_speed
+        else:
+            # Обычное движение врага, если игрок далеко
+            self.rect.x += self.speed_x
+            if self.rect.right > WIDTH or self.rect.left < 0:
+                self.speed_x = -self.speed_x
+
 
 class Box(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
-        self.image = box_image
+        self.image = random.choice(box_images)
         self.rect = self.image.get_rect()
-        self.rect.center = (x, y)
+        # Размещение коробки на земле
+        self.rect.x = x
+        self.rect.y = HEIGHT - 40 - self.rect.height  # Вычисление Y-координаты для того, чтобы объект стоял на земле
+        
 
 class Bonus(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -233,21 +365,24 @@ def load_level(level_number):
     terrain = Terrain()
     all_sprites.add(player, terrain)
 
+
+
     # Создаем врагов, коробки и бонусы
     for _ in range(LEVELS[LEVEL-1]['num_enemies']):
-        enemy = Enemy(random.randint(50, LEVEL_WIDTH - 50), HEIGHT - 100)
+        enemy = Enemy(random.randint(1200, LEVEL_WIDTH - 50), random.randint(10, 400))
         all_sprites.add(enemy)
         enemies.add(enemy)
 
     for _ in range(LEVELS[LEVEL-1]['num_bonuses']):
-        box = Box(random.randint(50, LEVEL_WIDTH - 50), HEIGHT - 100)
+        bonus = Bonus(random.randint(50, LEVEL_WIDTH - 50), random.randint(10, 550))
+        all_sprites.add(bonus)
+        bonuses.add(bonus)        
+
+    for _ in range(LEVELS[LEVEL-1]['num_boxes']):
+        box = Box(random.randint(50, LEVEL_WIDTH - 50), HEIGHT - 150)
         all_sprites.add(box)
         boxes.add(box)
 
-    for _ in range(LEVELS[LEVEL-1]['num_boxes']):
-        bonus = Bonus(random.randint(50, LEVEL_WIDTH - 50), HEIGHT - 100)
-        all_sprites.add(bonus)
-        bonuses.add(bonus)
 
 
     camera = Camera(LEVEL_WIDTH, HEIGHT)  # Создаем камеру    
@@ -273,17 +408,19 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
+            if event.key == pygame.K_a:  # Движение назад
                 player.speed_x = -5
-            elif event.key == pygame.K_RIGHT:
+            elif event.key == pygame.K_d:  # Движение вперед
                 player.speed_x = 5
-            elif event.key == pygame.K_SPACE:
+            elif event.key == pygame.K_w:  # Прыжок
                 player.jump()
-            elif event.key == pygame.K_LCTRL:
+            elif event.key == pygame.K_SPACE:  # Выстрел
                 player.shoot()
         elif event.type == pygame.KEYUP:
-            if event.key in [pygame.K_LEFT, pygame.K_RIGHT]:
+            if event.key in [pygame.K_a, pygame.K_d]:
                 player.speed_x = 0
+            if event.key == pygame.K_SPACE:
+                player.stop_shooting()
 
     # if player.speed_x != 0:
     #     update_background(player.speed_x / abs(player.speed_x))  # Обновляем положение фона
@@ -304,7 +441,8 @@ while running:
         player.lives -= 1
         print(f"Player lives: {player.lives}")
         if player.lives <= 0:
-            running = True  # Игра заканчивается при отсутствии жизней
+            # running = False  # Игра заканчивается при отсутствии жизней
+            load_level(LEVEL-1)
 
     # Проверка соприкосновений игрока с бонусами
     collected_bonuses = pygame.sprite.spritecollide(player, bonuses, True)
@@ -330,7 +468,9 @@ while running:
                 load_level(LEVEL-1)
             else:
                 print("Вы прошли все уровни!")
-                running = False
+                # running = False
+                LEVEL = 1
+                load_level(LEVEL-1)
 
     pygame.display.flip()
 
