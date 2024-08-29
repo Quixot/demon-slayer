@@ -26,6 +26,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Platformer")
 
 
+
 # Цвета
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -64,6 +65,9 @@ box_images = [
 
 bonus_image = pygame.image.load(img('bonus.png')).convert_alpha()
 bonus_image = pygame.transform.scale(bonus_image, (64, 64))
+
+life_image = pygame.image.load(img('life.png')).convert_alpha()
+life_image = pygame.transform.scale(life_image, (64, 64))
 
 # Изображение пули
 bullet_image =  load_emoji("⭐", (16,16))

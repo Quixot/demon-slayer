@@ -5,7 +5,6 @@ from config.config import *
 # https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer?tab=readme-ov-file
 # https://openmoji.org/library
 
-print(LEVELS)
 
 class Camera:
     def __init__(self, width, height):
@@ -45,9 +44,10 @@ class Player(pygame.sprite.Sprite):
         self.speed_x = 0
         self.speed_y = 0
         self.on_ground = False
-        self.lives = 3
+        # self.lives = 3
         self.last_direction = 'right'  # В какую сторону смотрел плеер до остановки
         self.is_shooting = False
+
 
     def update(self):
         self.gravity()
@@ -117,13 +117,17 @@ class Player(pygame.sprite.Sprite):
                     self.image = self.run_frames_left[0]  # Статичная поза
 
     def shoot(self):
-        self.is_shooting = True
-        if self.last_direction == 'right':
-            bullet = Bullet(self.rect.right, self.rect.centery, 5)
-        else:
-            bullet = Bullet(self.rect.left, self.rect.centery, -5)
-        all_sprites.add(bullet)
-        bullets.add(bullet)
+        global weapons 
+
+        if weapons > 0:
+            self.is_shooting = True
+            if self.last_direction == 'right':
+                bullet = Bullet(self.rect.right, self.rect.centery, 5)
+            else:
+                bullet = Bullet(self.rect.left, self.rect.centery, -5)
+            all_sprites.add(bullet)
+            bullets.add(bullet)
+            weapons -= 1
 
     def stop_shooting(self):
         self.is_shooting = False        
@@ -230,6 +234,13 @@ class Bonus(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
 
+class Life(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = life_image
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)        
+
 
 class Terrain(pygame.sprite.Sprite):
     def __init__(self):
@@ -239,11 +250,14 @@ class Terrain(pygame.sprite.Sprite):
         self.rect.x = 0
         self.rect.y = HEIGHT - 50
 
-
+score = 0
+bonus = 0
+weapons = 50
+lives_score = 3
 
 
 def load_level(level_number):
-    global all_sprites, enemies, boxes, bonuses, bullets, player, terrain, camera, background, bg_width, bg_height, background_speed
+    global all_sprites, enemies, boxes, bonuses, weapons, lives, bullets, player, terrain, camera, background, bg_width, bg_height, background_speed
 
     # Загрузка изображения фона
     background = pygame.image.load(img(LEVELS[LEVEL-1]['background']))
@@ -256,6 +270,7 @@ def load_level(level_number):
     enemies = pygame.sprite.Group()
     boxes = pygame.sprite.Group()
     bonuses = pygame.sprite.Group()
+    lives = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
 
     # Создание объектов
@@ -276,7 +291,14 @@ def load_level(level_number):
     for _ in range(LEVELS[level_number]['num_bonuses']):
         bonus = Bonus(random.randint(50, LEVEL_WIDTH - 50), random.randint(10, 550))
         all_sprites.add(bonus)
-        bonuses.add(bonus)        
+        bonuses.add(bonus)   
+
+
+    # Создаем аптечки
+    for _ in range(LEVELS[level_number]['num_lives']):
+        life = Life(random.randint(50, LEVEL_WIDTH - 50), random.randint(10, 550))
+        all_sprites.add(life)
+        lives.add(life)                
 
 
     # Создаем камни
@@ -297,12 +319,15 @@ def draw_background():
         screen.blit(background, (i * bg_width + camera.camera.x * background_speed, 0))        
 
 
-
 load_level(LEVEL-1)
+
+
 
 # Основной игровой цикл
 running = True
-score = 0
+
+# Инициализация шрифта
+font = pygame.font.Font(None, 34)  # None - шрифт по умолчанию, 74 - размер
 
 while running:
     clock.tick(FPS)
@@ -334,21 +359,30 @@ while running:
     # Проверка попаданий пуль во врагов
     hits = pygame.sprite.groupcollide(enemies, bullets, True, True)
     if hits:
-        score += len(hits) * 100  # Очки за уничтожение врагов
+        score += len(hits)  # Очки за уничтожение врагов
 
     # Проверка соприкосновений игрока с врагами
     if pygame.sprite.spritecollideany(player, enemies):
-        player.lives -= 1
-        print(f"Player lives: {player.lives}")
-        if player.lives <= 0:
-            # running = False  # Игра заканчивается при отсутствии жизней
+        lives_score -= 1
+        print(f"Player lives: {lives_score}")
+        
+        if lives_score <= 0:
+            running = False  # Игра заканчивается при отсутствии жизней
+        else: 
             load_level(LEVEL-1)
 
     # Проверка соприкосновений игрока с бонусами
     collected_bonuses = pygame.sprite.spritecollide(player, bonuses, True)
     if collected_bonuses:
-        player.lives += len(collected_bonuses)
-        print(f"Player lives: {player.lives}")
+        print(f"Bonus: {bonus}")
+        bonus += 1
+
+    # Проверка соприкосновений игрока с аптечками
+    collected_lives = pygame.sprite.spritecollide(player, lives, True)
+    if collected_lives:
+        print(f"Player lives: {lives_score}")
+        lives_score += 1 # len(collected_bonuses)
+          
 
 
     # Проверка соприкосновений пуль с камнями
@@ -368,6 +402,18 @@ while running:
                 obj_box[0].image = box_images[obj_box[0].hit_cout + 1]
                 obj_box[0].hit_cout -= 1 
 
+    # Отображение текста на экране 
+    score_text = font.render(f"Score: {score}", True, (255, 255, 255))  # Белый текст
+    screen.blit(score_text, (10, 10))  # Позиция текста (10, 10)
+
+    bonus_text = font.render(f"Bonuses: {bonus}", True, (255, 255, 255))  # Белый текст
+    screen.blit(bonus_text, (10, 40))  # Позиция текста (10, 10)
+
+    lives_text = font.render(f"Lives: {lives_score}", True, (255, 255, 255))  # Белый текст
+    screen.blit(lives_text, (10, 80))  # Позиция текста (10, 10)
+
+    weapons_text = font.render(f"Weapons: {weapons}", True, (255, 255, 255))  # Белый текст
+    screen.blit(weapons_text, (10, 120))  # Позиция текста (10, 10)
 
     for sprite in all_sprites:
         screen.blit(sprite.image, camera.apply(sprite))
@@ -389,6 +435,7 @@ while running:
                 # running = False
                 LEVEL = 1
                 load_level(LEVEL-1)
+
 
     pygame.display.flip()
 
