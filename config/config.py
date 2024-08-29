@@ -69,6 +69,9 @@ bonus_image = pygame.transform.scale(bonus_image, (64, 64))
 life_image = pygame.image.load(img('life.png')).convert_alpha()
 life_image = pygame.transform.scale(life_image, (64, 64))
 
+ammunition_image = pygame.image.load(img('ammunition.png')).convert_alpha()
+ammunition_image = pygame.transform.scale(ammunition_image, (100, 64))
+
 # Изображение пули
 bullet_image =  load_emoji("⭐", (16,16))
 

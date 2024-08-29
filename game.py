@@ -30,7 +30,6 @@ class Camera:
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        # self.image = player_image_right
         self.run_frames_right = run_frames_right
         self.run_frames_left = run_frames_left
         self.shoot_frames_right = shoot_frames_right
@@ -44,7 +43,6 @@ class Player(pygame.sprite.Sprite):
         self.speed_x = 0
         self.speed_y = 0
         self.on_ground = False
-        # self.lives = 3
         self.last_direction = 'right'  # В какую сторону смотрел плеер до остановки
         self.is_shooting = False
 
@@ -134,8 +132,6 @@ class Player(pygame.sprite.Sprite):
 
     def collide_with_boxes(self, direction):
         if direction == 'x':
-            # smaller_rect = self.rect.inflate(-10, 0)  # Уменьшаем ширину на 10 пикселей (по 5 с каждой стороны)
-            # hits = [box for box in boxes if box.rect.colliderect(smaller_rect)]
             hits = pygame.sprite.spritecollide(self, boxes, False)
             
             if hits:
@@ -184,7 +180,7 @@ class Enemy(pygame.sprite.Sprite):
         self.speed_x = random.choice(LEVELS[LEVEL-1]['enemy_speed_range'])
         self.speed_y = 0
         self.attack_speed = 3  # Скорость движения врага к игроку
-        self.attack_distance = 300  # Расстояние, на котором враг начинает атаковать
+        self.attack_distance = 550  # Расстояние, на котором враг начинает атаковать
         self.visibility = 0
         self.image.set_alpha(self.visibility)    # Полная прозрачность
 
@@ -239,13 +235,20 @@ class Life(pygame.sprite.Sprite):
         super().__init__()
         self.image = life_image
         self.rect = self.image.get_rect()
-        self.rect.center = (x, y)        
+        self.rect.center = (x, y)
+
+class Ammunition(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = ammunition_image
+        self.rect = self.image.get_rect()
+        self.rect.center = (x, y)            
 
 
 class Terrain(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
-        self.image = pygame.Surface((LEVEL_WIDTH, 50))
+        self.image = pygame.Surface((LEVEL_WIDTH, 50)) # , pygame.SRCALPHA
         self.rect = self.image.get_rect()
         self.rect.x = 0
         self.rect.y = HEIGHT - 50
@@ -257,7 +260,7 @@ lives_score = 3
 
 
 def load_level(level_number):
-    global all_sprites, enemies, boxes, bonuses, weapons, lives, bullets, player, terrain, camera, background, bg_width, bg_height, background_speed
+    global all_sprites, enemies, boxes, bonuses, weapons, lives, ammunitions, bullets, player, terrain, camera, background, bg_width, bg_height, background_speed
 
     # Загрузка изображения фона
     background = pygame.image.load(img(LEVELS[LEVEL-1]['background']))
@@ -271,6 +274,7 @@ def load_level(level_number):
     boxes = pygame.sprite.Group()
     bonuses = pygame.sprite.Group()
     lives = pygame.sprite.Group()
+    ammunitions = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
 
     # Создание объектов
@@ -289,21 +293,28 @@ def load_level(level_number):
 
     # Создаем бонусы
     for _ in range(LEVELS[level_number]['num_bonuses']):
-        bonus = Bonus(random.randint(50, LEVEL_WIDTH - 50), random.randint(10, 550))
+        bonus = Bonus(random.randint(1200, LEVEL_WIDTH - 50), random.randint(10, 550))
         all_sprites.add(bonus)
         bonuses.add(bonus)   
 
 
     # Создаем аптечки
     for _ in range(LEVELS[level_number]['num_lives']):
-        life = Life(random.randint(50, LEVEL_WIDTH - 50), random.randint(10, 550))
+        life = Life(random.randint(1200, LEVEL_WIDTH - 50), random.randint(10, 550))
         all_sprites.add(life)
-        lives.add(life)                
+        lives.add(life)           
+
+
+    # Создаем боеприпасы
+    for _ in range(LEVELS[level_number]['num_ammunition']):
+        ammunition = Ammunition(random.randint(1200, LEVEL_WIDTH - 50), random.randint(10, 550))
+        all_sprites.add(ammunition)
+        ammunitions.add(ammunition)       
 
 
     # Создаем камни
     for _ in range(LEVELS[level_number]['num_boxes']):
-        box = Box(random.randint(50, LEVEL_WIDTH - 50), HEIGHT - 100)
+        box = Box(random.randint(800, LEVEL_WIDTH - 50), HEIGHT - 100)
         all_sprites.add(box)
         boxes.add(box)
 
@@ -383,6 +394,12 @@ while running:
         print(f"Player lives: {lives_score}")
         lives_score += 1 # len(collected_bonuses)
           
+
+    # Проверка соприкосновений игрока с аптечками
+    collected_ammunitions = pygame.sprite.spritecollide(player, ammunitions, True)
+    if collected_ammunitions:
+        print(f"Player ammunitions: {weapons}")
+        weapons += 10 # len(collected_bonuses)
 
 
     # Проверка соприкосновений пуль с камнями
