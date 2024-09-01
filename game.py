@@ -16,7 +16,7 @@ class Camera:
         return entity.rect.move(self.camera.topleft)
 
     def update(self, target):
-        x = -target.rect.centerx + WIDTH // 2
+        x = -target.rect.centerx + WIDTH // 2 - 100
         # Ограничение движения камеры
         x = min(0, x)  # Левую границу фиксируем
         max_x = -(self.width - WIDTH)  # Правую границу фиксируем, но делаем корректировку
@@ -163,10 +163,16 @@ class Bullet(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = (x, y)
         self.speed_x = speed_x*1.5
+        self.lifetime = 1000  # Время жизни пули в миллисекундах
+        self.spawn_time = pygame.time.get_ticks()  # Время создания пули
 
     def update(self):
         self.rect.x += self.speed_x
-        if self.rect.right < 0 or self.rect.left > LEVEL_WIDTH:
+
+        # Проверка времени жизни
+        current_time = pygame.time.get_ticks()
+
+        if self.rect.right < 0 or self.rect.left > LEVEL_WIDTH or current_time - self.spawn_time > self.lifetime:
             self.kill()           
 
 
@@ -179,7 +185,7 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.center = (x, y)
         self.speed_x = random.choice(LEVELS[LEVEL-1]['enemy_speed_range'])
         self.speed_y = 0
-        self.attack_speed = 3  # Скорость движения врага к игроку
+        self.attack_speed = 7  # Скорость движения врага к игроку
         self.attack_distance = 550  # Расстояние, на котором враг начинает атаковать
         self.visibility = 0
         self.image.set_alpha(self.visibility)    # Полная прозрачность
@@ -387,6 +393,9 @@ while running:
     if collected_bonuses:
         print(f"Bonus: {bonus}")
         bonus += 1
+        if bonus == 10:
+            weapons += 10
+            bonus = 0
 
     # Проверка соприкосновений игрока с аптечками
     collected_lives = pygame.sprite.spritecollide(player, lives, True)
@@ -420,17 +429,17 @@ while running:
                 obj_box[0].hit_cout -= 1 
 
     # Отображение текста на экране 
-    score_text = font.render(f"Score: {score}", True, (255, 255, 255))  # Белый текст
+    score_text = font.render(f"Score: {score}", True, (255, 153, 0))  # Цвет текста
     screen.blit(score_text, (10, 10))  # Позиция текста (10, 10)
 
-    bonus_text = font.render(f"Bonuses: {bonus}", True, (255, 255, 255))  # Белый текст
+    bonus_text = font.render(f"Bonuses: {bonus}", True, (255, 204, 0))  # Цвет текста
     screen.blit(bonus_text, (10, 40))  # Позиция текста (10, 10)
 
-    lives_text = font.render(f"Lives: {lives_score}", True, (255, 255, 255))  # Белый текст
-    screen.blit(lives_text, (10, 80))  # Позиция текста (10, 10)
+    lives_text = font.render(f"Lives: {lives_score}", True, (0, 204, 102))  # Цвет текста
+    screen.blit(lives_text, (10, 70))  # Позиция текста (10, 10)
 
-    weapons_text = font.render(f"Weapons: {weapons}", True, (255, 255, 255))  # Белый текст
-    screen.blit(weapons_text, (10, 120))  # Позиция текста (10, 10)
+    weapons_text = font.render(f"Weapons: {weapons}", True, (153, 0, 0))  # Цвет текста
+    screen.blit(weapons_text, (10, 100))  # Позиция текста (10, 10)
 
     for sprite in all_sprites:
         screen.blit(sprite.image, camera.apply(sprite))

@@ -45,7 +45,7 @@ enemy_images = [
     pygame.image.load(img("daemon2.png")),
     pygame.image.load(img("daemon3.png"))
 ]
-enemy_images = [pygame.transform.scale(img, (120, 120)) for img in enemy_images]
+enemy_images = [pygame.transform.scale(img, (200, 220)) for img in enemy_images]
 
 # Загрузка изображений камней
 rock = pygame.image.load(img("rock2.png"))
@@ -100,7 +100,7 @@ shoot_frames_left = [
 ]
 
 # Опционально: изменение размера изображений
-run_frames_right = [pygame.transform.scale(frame, (128, 128)) for frame in run_frames_right]
-run_frames_left = [pygame.transform.scale(frame, (128, 128)) for frame in run_frames_left]
-shoot_frames_right = [pygame.transform.scale(frame, (128, 128)) for frame in shoot_frames_right]
-shoot_frames_left = [pygame.transform.scale(frame, (128, 128)) for frame in shoot_frames_left]
+run_frames_right = [pygame.transform.scale(frame, (128, 138)) for frame in run_frames_right]
+run_frames_left = [pygame.transform.scale(frame, (128, 138)) for frame in run_frames_left]
+shoot_frames_right = [pygame.transform.scale(frame, (128, 138)) for frame in shoot_frames_right]
+shoot_frames_left = [pygame.transform.scale(frame, (128, 138)) for frame in shoot_frames_left]
