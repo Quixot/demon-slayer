@@ -264,6 +264,29 @@ bonus = 0
 weapons = 50
 lives_score = 3
 
+# Функция отрисовки текста
+def draw_text(text, font, color, surface, x, y):
+    text_obj = font.render(text, True, color)
+    text_rect = text_obj.get_rect()
+    text_rect.center = (x, y)
+    surface.blit(text_obj, text_rect)
+# Настройки
+def main_menu():
+    screen.fill(WHITE)
+    # draw_text("Main Menu", font, BLACK, screen, WIDTH // 2, HEIGHT // 2 - 100)
+    # draw_text("1. Start Game", font, BLACK, screen, WIDTH // 2, HEIGHT // 2)
+    # draw_text("2. Settings", font, BLACK, screen, WIDTH // 2, HEIGHT // 2 + 50)
+    # draw_text("3. Quit", font, BLACK, screen, WIDTH // 2, HEIGHT // 2 + 100)
+    # Отображение изображения в меню
+    # Загрузка изображения
+    bonus_pict = pygame.image.load(img("bonus.png")) 
+    bonus_pict = pygame.transform.scale(bonus_pict, (200, 200))  # Изменение размера изображения (опционально)
+
+    screen.blit(bonus_pict, (WIDTH // 2 - 100, HEIGHT // 2 - 200))  # Центрирование изображения
+    draw_text(f"weapons: {weapons}", font, BLACK, screen, WIDTH // 2, HEIGHT // 2)
+    draw_text(f"bonuses: {bonus}", font, BLACK, screen, WIDTH // 2, HEIGHT // 2 + 50)
+    pygame.display.flip()
+
 
 def load_level(level_number):
     global all_sprites, enemies, boxes, bonuses, weapons, lives, ammunitions, bullets, player, terrain, camera, background, bg_width, bg_height, background_speed
@@ -342,126 +365,143 @@ load_level(LEVEL-1)
 
 # Основной игровой цикл
 running = True
+# Игровое состояние
+game_state = "menu"  # Возможные состояния: "menu", "settings", "game"
 
 # Инициализация шрифта
 font = pygame.font.Font(None, 34)  # None - шрифт по умолчанию, 74 - размер
 
+
 while running:
     clock.tick(FPS)
     
+    
+    if game_state == "menu": # Если меню
+        main_menu()
+    else: # Если игра
+
+        all_sprites.update()
+        camera.update(player)
+        draw_background() # Отрисовываем фон
+
+
+        # Проверка попаданий пуль во врагов
+        hits = pygame.sprite.groupcollide(enemies, bullets, True, True)
+        if hits:
+            score += len(hits)  # Очки за уничтожение врагов
+
+        # Проверка соприкосновений игрока с врагами
+        if pygame.sprite.spritecollideany(player, enemies):
+            lives_score -= 1
+            print(f"Player lives: {lives_score}")
+            
+            if lives_score <= 0:
+                running = False  # Игра заканчивается при отсутствии жизней
+            else: 
+                load_level(LEVEL-1)
+
+        # Проверка соприкосновений игрока с бонусами
+        collected_bonuses = pygame.sprite.spritecollide(player, bonuses, True)
+        if collected_bonuses:
+            print(f"Bonus: {bonus}")
+            bonus += 1
+            if bonus == 10:
+                weapons 
+                
+                bonus = 0
+
+        # Проверка соприкосновений игрока с аптечками
+        collected_lives = pygame.sprite.spritecollide(player, lives, True)
+        if collected_lives:
+            print(f"Player lives: {lives_score}")
+            lives_score += 1 # len(collected_bonuses)
+            
+
+        # Проверка соприкосновений игрока с аптечками
+        collected_ammunitions = pygame.sprite.spritecollide(player, ammunitions, True)
+        if collected_ammunitions:
+            print(f"Player ammunitions: {weapons}")
+            weapons += 10 # len(collected_bonuses)
+
+
+        # Проверка соприкосновений пуль с камнями
+        hits = pygame.sprite.groupcollide(bullets, boxes, True, False)
+        if hits:
+            for obj_bullet, obj_box in hits.items():
+
+                print(player.last_direction, obj_box[0], obj_box[0].hit_cout, end="\r")
+                
+                if obj_box[0].hit_cout == 1:
+                    obj_box[0].kill()
+                if player.last_direction == "right":
+                    
+                    obj_box[0].image = box_images[obj_box[0].hit_cout - 2]   
+                    obj_box[0].hit_cout -= 1 
+                else:
+                    obj_box[0].image = box_images[obj_box[0].hit_cout + 1]
+                    obj_box[0].hit_cout -= 1 
+
+        # Отображение текста на экране 
+        score_text = font.render(f"Score: {score}", True, (255, 153, 0))  # Цвет текста
+        screen.blit(score_text, (10, 10))  # Позиция текста (10, 10)
+
+        bonus_text = font.render(f"Bonuses: {bonus}", True, (255, 204, 0))  # Цвет текста
+        screen.blit(bonus_text, (10, 40))  # Позиция текста (10, 10)
+
+        lives_text = font.render(f"Lives: {lives_score}", True, (0, 204, 102))  # Цвет текста
+        screen.blit(lives_text, (10, 70))  # Позиция текста (10, 10)
+
+        weapons_text = font.render(f"Weapons: {weapons}", True, (153, 0, 0))  # Цвет текста
+        screen.blit(weapons_text, (10, 100))  # Позиция текста (10, 10)
+
+        for sprite in all_sprites:
+            screen.blit(sprite.image, camera.apply(sprite))
+
+
+        # Если игрок достиг правого края уровня, остановите камеру
+        if camera.is_at_right_edge() and player.rect.right < LEVELS[LEVEL-1]['level_width']:
+            # player.speed_x = 5  # Задайте скорость игрока
+
+            # Если игрок достиг правого края уровня, загружается следующий уровень
+            if player.rect.right >= LEVEL_WIDTH - 5:
+                
+                if LEVEL < len(LEVELS):
+                    LEVEL += 1
+                    print(f"Next level! {LEVEL}")
+                    load_level(LEVEL-1)
+                else:
+                    print("Вы прошли все уровни!")
+                    # running = False
+                    LEVEL = 1
+                    load_level(LEVEL-1)
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_a:  # Движение назад
-                player.speed_x = -5
-            elif event.key == pygame.K_d:  # Движение вперед
-                player.speed_x = 5
-            elif event.key == pygame.K_w:  # Прыжок
-                player.jump()
-            elif event.key == pygame.K_SPACE:  # Выстрел
-                player.shoot()
+            if game_state == "menu":
+                if event.key == pygame.K_1:
+                    game_state = "game"
+                elif event.key == pygame.K_2:
+                    game_state = "settings"
+                elif event.key == pygame.K_3:
+                    running = False
+            elif game_state == "game":
+                if event.key == pygame.K_2:
+                    game_state = "menu"
+                elif event.key == pygame.K_a:  # Движение назад
+                    player.speed_x = -5
+                elif event.key == pygame.K_d:  # Движение вперед
+                    player.speed_x = 5
+                elif event.key == pygame.K_w:  # Прыжок
+                    player.jump()
+                elif event.key == pygame.K_SPACE:  # Выстрел
+                    player.shoot()
         elif event.type == pygame.KEYUP:
             if event.key in [pygame.K_a, pygame.K_d]:
                 player.speed_x = 0
             if event.key == pygame.K_SPACE:
                 player.stop_shooting()
-
-
-    all_sprites.update()
-    camera.update(player)
-    draw_background() # Отрисовываем фон
-
-
-    # Проверка попаданий пуль во врагов
-    hits = pygame.sprite.groupcollide(enemies, bullets, True, True)
-    if hits:
-        score += len(hits)  # Очки за уничтожение врагов
-
-    # Проверка соприкосновений игрока с врагами
-    if pygame.sprite.spritecollideany(player, enemies):
-        lives_score -= 1
-        print(f"Player lives: {lives_score}")
-        
-        if lives_score <= 0:
-            running = False  # Игра заканчивается при отсутствии жизней
-        else: 
-            load_level(LEVEL-1)
-
-    # Проверка соприкосновений игрока с бонусами
-    collected_bonuses = pygame.sprite.spritecollide(player, bonuses, True)
-    if collected_bonuses:
-        print(f"Bonus: {bonus}")
-        bonus += 1
-        if bonus == 10:
-            weapons += 10
-            bonus = 0
-
-    # Проверка соприкосновений игрока с аптечками
-    collected_lives = pygame.sprite.spritecollide(player, lives, True)
-    if collected_lives:
-        print(f"Player lives: {lives_score}")
-        lives_score += 1 # len(collected_bonuses)
-          
-
-    # Проверка соприкосновений игрока с аптечками
-    collected_ammunitions = pygame.sprite.spritecollide(player, ammunitions, True)
-    if collected_ammunitions:
-        print(f"Player ammunitions: {weapons}")
-        weapons += 10 # len(collected_bonuses)
-
-
-    # Проверка соприкосновений пуль с камнями
-    hits = pygame.sprite.groupcollide(bullets, boxes, True, False)
-    if hits:
-        for obj_bullet, obj_box in hits.items():
-
-            print(player.last_direction, obj_box[0], obj_box[0].hit_cout, end="\r")
-            
-            if obj_box[0].hit_cout == 1:
-                obj_box[0].kill()
-            if player.last_direction == "right":
-                   
-                obj_box[0].image = box_images[obj_box[0].hit_cout - 2]   
-                obj_box[0].hit_cout -= 1 
-            else:
-                obj_box[0].image = box_images[obj_box[0].hit_cout + 1]
-                obj_box[0].hit_cout -= 1 
-
-    # Отображение текста на экране 
-    score_text = font.render(f"Score: {score}", True, (255, 153, 0))  # Цвет текста
-    screen.blit(score_text, (10, 10))  # Позиция текста (10, 10)
-
-    bonus_text = font.render(f"Bonuses: {bonus}", True, (255, 204, 0))  # Цвет текста
-    screen.blit(bonus_text, (10, 40))  # Позиция текста (10, 10)
-
-    lives_text = font.render(f"Lives: {lives_score}", True, (0, 204, 102))  # Цвет текста
-    screen.blit(lives_text, (10, 70))  # Позиция текста (10, 10)
-
-    weapons_text = font.render(f"Weapons: {weapons}", True, (153, 0, 0))  # Цвет текста
-    screen.blit(weapons_text, (10, 100))  # Позиция текста (10, 10)
-
-    for sprite in all_sprites:
-        screen.blit(sprite.image, camera.apply(sprite))
-
-
-    # Если игрок достиг правого края уровня, остановите камеру
-    if camera.is_at_right_edge() and player.rect.right < LEVELS[LEVEL-1]['level_width']:
-        # player.speed_x = 5  # Задайте скорость игрока
-
-        # Если игрок достиг правого края уровня, загружается следующий уровень
-        if player.rect.right >= LEVEL_WIDTH - 5:
-            
-            if LEVEL < len(LEVELS):
-                LEVEL += 1
-                print(f"Next level! {LEVEL}")
-                load_level(LEVEL-1)
-            else:
-                print("Вы прошли все уровни!")
-                # running = False
-                LEVEL = 1
-                load_level(LEVEL-1)
-
 
     pygame.display.flip()
 
