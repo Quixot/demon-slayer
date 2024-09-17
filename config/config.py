@@ -38,7 +38,6 @@ clock = pygame.time.Clock()
 
 
 
-
 # Загрузка изображений врагов
 enemy_images = [
     pygame.image.load(img("daemon1.png")),
